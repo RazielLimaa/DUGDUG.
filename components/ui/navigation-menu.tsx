@@ -1,166 +1,212 @@
-import * as React from 'react'
-import * as NavigationMenuPrimitive from '@radix-ui/react-navigation-menu'
-import { cva } from 'class-variance-authority'
-import { ChevronDownIcon } from 'lucide-react'
+"use client"
 
-import { cn } from '@/lib/utils'
+import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Menu, LogOut } from "lucide-react"
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import Link from "next/link"
+import { useAuth } from "@/contexts/auth-context"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-function NavigationMenu({
-  className,
-  children,
-  viewport = true,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Root> & {
-  viewport?: boolean
-}) {
+export function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user, logout, isLoading } = useAuth()
+
+  const getUserInitial = () => {
+    if (!user) return "?"
+    if (user.first_name) return user.first_name.charAt(0).toUpperCase()
+    if (user.username) return user.username.charAt(0).toUpperCase()
+    return "U"
+  }
+
   return (
-    <NavigationMenuPrimitive.Root
-      data-slot="navigation-menu"
-      data-viewport={viewport}
-      className={cn(
-        'group/navigation-menu relative flex max-w-max flex-1 items-center justify-center',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      {viewport && <NavigationMenuViewport />}
-    </NavigationMenuPrimitive.Root>
-  )
-}
+    <>
+      <header className="fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 z-50 w-[96%] sm:w-[95%] max-w-7xl px-2 sm:px-0">
+        <div className="bg-white rounded-full shadow-lg px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link href="/">
+              <Image
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-l07pSsyyghggarXhBVkQhq8Lgz2Xvn.png"
+                alt="Dug Dug"
+                width={180}
+                height={60}
+                className="h-8 sm:h-10 w-auto cursor-pointer"
+              />
+            </Link>
+          </div>
 
-function NavigationMenuList({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.List>) {
-  return (
-    <NavigationMenuPrimitive.List
-      data-slot="navigation-menu-list"
-      className={cn(
-        'group flex flex-1 list-none items-center justify-center gap-1',
-        className,
-      )}
-      {...props}
-    />
-  )
-}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
+            <Link
+              href="/"
+              className="text-gray-500 hover:text-black text-sm xl:text-base font-medium transition-colors"
+            >
+              Home
+            </Link>
+            <Link
+              href="/afiliar-se"
+              className="text-gray-500 hover:text-black text-sm xl:text-base font-medium transition-colors"
+            >
+              Afiliar-se
+            </Link>
+            <Link
+              href="/contato"
+              className="text-gray-500 hover:text-black text-sm xl:text-base font-medium transition-colors"
+            >
+              Contato
+            </Link>
+            <Link
+              href="/afiliar-se"
+              className="text-gray-500 hover:text-black text-sm xl:text-base font-medium transition-colors"
+            >
+              Conhecer
+            </Link>
+            {user && (
+              <Link
+                href="/dashboard"
+                className="text-gray-500 hover:text-black text-sm xl:text-base font-medium transition-colors"
+              >
+                Dashboard
+              </Link>
+            )}
+          </nav>
 
-function NavigationMenuItem({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Item>) {
-  return (
-    <NavigationMenuPrimitive.Item
-      data-slot="navigation-menu-item"
-      className={cn('relative', className)}
-      {...props}
-    />
-  )
-}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {user ? (
+              <>
+                <Avatar className="h-10 w-10 border-2 border-[#4CE921]">
+                  <AvatarFallback className="bg-[#4CE921] text-black font-bold text-lg">
+                    {getUserInitial()}
+                  </AvatarFallback>
+                </Avatar>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 bg-transparent"
+                  onClick={() => logout()}
+                  disabled={isLoading}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>{isLoading ? "Saindo..." : "Sair"}</span>
+                </Button>
+              </>
+            ) : (
+              // Not logged in: Show login button
+              <Link href="/entrar">
+                <Button className="hidden sm:flex bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-full px-6 sm:px-8 lg:px-10 py-4 sm:py-5 text-sm sm:text-base font-semibold">
+                  Entrar
+                </Button>
+              </Link>
+            )}
 
-const navigationMenuTriggerStyle = cva(
-  'group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=open]:hover:bg-accent data-[state=open]:text-accent-foreground data-[state=open]:focus:bg-accent data-[state=open]:bg-accent/50 focus-visible:ring-ring/50 outline-none transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1',
-)
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
-function NavigationMenuTrigger({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Trigger>) {
-  return (
-    <NavigationMenuPrimitive.Trigger
-      data-slot="navigation-menu-trigger"
-      className={cn(navigationMenuTriggerStyle(), 'group', className)}
-      {...props}
-    >
-      {children}{' '}
-      <ChevronDownIcon
-        className="relative top-[1px] ml-1 size-3 transition duration-300 group-data-[state=open]:rotate-180"
-        aria-hidden="true"
-      />
-    </NavigationMenuPrimitive.Trigger>
-  )
-}
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <nav className="flex flex-col gap-6 mt-16">
+                <Link
+                  href="/"
+                  className="text-gray-700 hover:text-black text-lg font-medium transition-colors py-2 border-b border-gray-100"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/afiliar-se"
+                  className="text-gray-700 hover:text-black text-lg font-medium transition-colors py-2 border-b border-gray-100"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Afiliar-se
+                </Link>
+                <Link
+                  href="/contato"
+                  className="text-gray-700 hover:text-black text-lg font-medium transition-colors py-2 border-b border-gray-100"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Contato
+                </Link>
+                <Link
+                  href="/afiliar-se"
+                  className="text-gray-700 hover:text-black text-lg font-medium transition-colors py-2 border-b border-gray-100"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Conhecer
+                </Link>
+                {user && (
+                  <Link
+                    href="/dashboard"
+                    className="text-gray-700 hover:text-black text-lg font-medium transition-colors py-2 border-b border-gray-100"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                )}
 
-function NavigationMenuContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Content>) {
-  return (
-    <NavigationMenuPrimitive.Content
-      data-slot="navigation-menu-content"
-      className={cn(
-        'data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52 top-0 left-0 w-full p-2 pr-2.5 md:absolute md:w-auto',
-        'group-data-[viewport=false]/navigation-menu:bg-popover group-data-[viewport=false]/navigation-menu:text-popover-foreground group-data-[viewport=false]/navigation-menu:data-[state=open]:animate-in group-data-[viewport=false]/navigation-menu:data-[state=closed]:animate-out group-data-[viewport=false]/navigation-menu:data-[state=closed]:zoom-out-95 group-data-[viewport=false]/navigation-menu:data-[state=open]:zoom-in-95 group-data-[viewport=false]/navigation-menu:data-[state=open]:fade-in-0 group-data-[viewport=false]/navigation-menu:data-[state=closed]:fade-out-0 group-data-[viewport=false]/navigation-menu:top-full group-data-[viewport=false]/navigation-menu:mt-1.5 group-data-[viewport=false]/navigation-menu:overflow-hidden group-data-[viewport=false]/navigation-menu:rounded-md group-data-[viewport=false]/navigation-menu:border group-data-[viewport=false]/navigation-menu:shadow group-data-[viewport=false]/navigation-menu:duration-200 **:data-[slot=navigation-menu-link]:focus:ring-0 **:data-[slot=navigation-menu-link]:focus:outline-none',
-        className,
-      )}
-      {...props}
-    />
-  )
-}
-
-function NavigationMenuViewport({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Viewport>) {
-  return (
-    <div
-      className={'absolute top-full left-0 isolate z-50 flex justify-center'}
-    >
-      <NavigationMenuPrimitive.Viewport
-        data-slot="navigation-menu-viewport"
-        className={cn(
-          'origin-top-center bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border shadow md:w-[var(--radix-navigation-menu-viewport-width)]',
-          className,
+                {user ? (
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Avatar className="h-12 w-12 border-2 border-[#4CE921]">
+                        <AvatarFallback className="bg-[#4CE921] text-black font-bold text-xl">
+                          {getUserInitial()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{user.first_name || user.username}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 justify-start bg-transparent border-red-200"
+                      onClick={() => {
+                        logout()
+                        setMobileMenuOpen(false)
+                      }}
+                      disabled={isLoading}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {isLoading ? "Saindo..." : "Sair"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Link href="/entrar" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
+                      Entrar
+                    </Button>
+                  </Link>
+                )}
+              </nav>
+            </motion.div>
+          </motion.div>
         )}
-        {...props}
-      />
-    </div>
+      </AnimatePresence>
+    </>
   )
-}
-
-function NavigationMenuLink({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Link>) {
-  return (
-    <NavigationMenuPrimitive.Link
-      data-slot="navigation-menu-link"
-      className={cn(
-        "data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:ring-ring/50 [&_svg:not([class*='text-'])]:text-muted-foreground flex flex-col gap-1 rounded-sm p-2 text-sm transition-all outline-none focus-visible:ring-[3px] focus-visible:outline-1 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
-      {...props}
-    />
-  )
-}
-
-function NavigationMenuIndicator({
-  className,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuPrimitive.Indicator>) {
-  return (
-    <NavigationMenuPrimitive.Indicator
-      data-slot="navigation-menu-indicator"
-      className={cn(
-        'data-[state=visible]:animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in top-full z-[1] flex h-1.5 items-end justify-center overflow-hidden',
-        className,
-      )}
-      {...props}
-    >
-      <div className="bg-border relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm shadow-md" />
-    </NavigationMenuPrimitive.Indicator>
-  )
-}
-
-export {
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuContent,
-  NavigationMenuTrigger,
-  NavigationMenuLink,
-  NavigationMenuIndicator,
-  NavigationMenuViewport,
-  navigationMenuTriggerStyle,
 }

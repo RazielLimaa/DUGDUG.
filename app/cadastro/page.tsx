@@ -46,32 +46,30 @@ export default function CadastroPage() {
       return
     }
 
-    try {
-      const response = await apiClient.createUser({
-        username,
-        email,
-        password,
-        first_name,
-        last_name,
-      })
+    if (await cookieStore.get("access_token")) {
+      setError("Você já está logado. Por favor, faça logout para criar uma nova conta.")
+      setIsLoading(false)
+      return
+    }
 
+const response = await apiClient.createUser({
+  username,
+  email,
+  password,
+  first_name,
+  last_name,
+  cpf,
+  phone,
+}
+)
+    try {
       if (response.error) {
-        // Tratamento de erros do Django
-        if (typeof response.error === "object") {
-          const messages: string[] = []
-          for (const key in response.error) {
-            if (Array.isArray(response.error[key])) {
-              messages.push(`${key}: ${response.error[key].join(", ")}`)
-            }
-          }
-          setError(messages.join(" | "))
-        } else {
-          setError(response.error)
-        }
+        setError(response.error)
         setIsLoading(false)
         return
       }
 
+      
       // Usuário criado com sucesso
       router.push("/entrar?registered=true")
     } catch (err) {

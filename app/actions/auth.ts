@@ -1,17 +1,20 @@
 "use server"
 
 import { cookies } from "next/headers"
-import  ApiClient from "@/lib/api"
+import ApiClient from "@/lib/api"
 import { redirect } from "next/navigation"
 
 export interface LoginResult {
   success: boolean
   error?: string
+  token?: string       
+  refresh?: string      
+  data?: any
 }
 
-export async function loginAction(username: string, password: string): Promise<LoginResult> {
+export async function loginAction(identifier: string, password: string): Promise<LoginResult> {
   try {
-    const response = await ApiClient.login({ username, password })
+    const response = await ApiClient.login({ identifier, password })
 
     if (response.error || !response.data) {
       return {
@@ -20,30 +23,49 @@ export async function loginAction(username: string, password: string): Promise<L
       }
     }
 
-    // Store tokens in HTTP-only cookies
+    const accessToken = response.data.access
+    const refreshToken = response.data.refresh
+
+    // Set authentication cookies
     const cookieStore = await cookies()
-    cookieStore.set("access_token", response.data.access, {
+    cookieStore.set("access_token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60, // 1 hour
+      path: "/",
     })
 
-    cookieStore.set("refresh_token", response.data.refresh, {
+    cookieStore.set("refresh_token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
     })
 
-    return { success: true }
+    cookieStore.set("username", identifier, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    })
+
+    return {
+      success: true,
+      token: accessToken,   // <- retorna o token
+      refresh: refreshToken // <- retorna o refresh
+    }
   } catch (error) {
+    console.error("Login action error:", error)
     return {
       success: false,
       error: "An unexpected error occurred",
     }
   }
 }
+
 
 export async function logoutAction(): Promise<void> {
   try {
@@ -54,9 +76,10 @@ export async function logoutAction(): Promise<void> {
       await ApiClient.logout(accessToken)
     }
 
-    // Clear cookies
+    // Clear all authentication cookies
     cookieStore.delete("access_token")
     cookieStore.delete("refresh_token")
+    cookieStore.delete("username")
   } catch (error) {
     console.error("Logout error:", error)
   }
@@ -79,6 +102,7 @@ export async function refreshTokenAction(): Promise<boolean> {
       // Clear invalid tokens
       cookieStore.delete("access_token")
       cookieStore.delete("refresh_token")
+      cookieStore.delete("username")
       return false
     }
 
@@ -88,6 +112,7 @@ export async function refreshTokenAction(): Promise<boolean> {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60, // 1 hour
+      path: "/",
     })
 
     return true
@@ -100,4 +125,28 @@ export async function refreshTokenAction(): Promise<boolean> {
 export async function getAccessToken(): Promise<string | null> {
   const cookieStore = await cookies()
   return cookieStore.get("access_token")?.value || null
+}
+
+// Get current user from cookies (used in layout for SSR)
+export async function getCurrentUser() {
+  try {
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get("access_token")?.value
+    const username = cookieStore.get("username")?.value
+
+    if (!accessToken || !username) {
+      return null
+    }
+
+    const response = await ApiClient.getUserDetail(username, accessToken)
+
+    if (response.error || !response.data) {
+      return null
+    }
+
+    return response.data
+  } catch (error) {
+    console.error("Get current user error:", error)
+    return null
+  }
 }

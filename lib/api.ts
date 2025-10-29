@@ -1,3 +1,6 @@
+// ====================
+// 🌐 CONFIGURAÇÃO BASE
+// ====================
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
 
 // ====================
@@ -18,24 +21,31 @@ const routes = {
   },
   affiliate: {
     base: "/affiliate/",
+    stats: "/affiliate/stats/",
+    sales: "/affiliate/sales/",
+  },
+  payout: {
+    base: "/payout/",
   },
 }
 
+// ====================
+// 🧩 TIPAGENS GERAIS
+// ====================
 export interface ApiResponse<T = any> {
   data?: T
   error?: string
   status: number
 }
 
-// ⚠️ Alteração aqui: identifier em vez de username
-export interface LoginCredentials {
-  identifier: string
-  password: string
-}
-
 export interface AuthTokens {
   access: string
   refresh: string
+}
+
+export interface LoginCredentials {
+  identifier: string
+  password: string
 }
 
 export interface User {
@@ -44,6 +54,8 @@ export interface User {
   email: string
   first_name?: string
   last_name?: string
+  cpf?: string
+  phone?: string
 }
 
 export interface UserRegistration {
@@ -52,6 +64,8 @@ export interface UserRegistration {
   password: string
   first_name?: string
   last_name?: string
+  cpf?: string
+  phone?: string
 }
 
 export interface UserUpdate {
@@ -59,6 +73,28 @@ export interface UserUpdate {
   first_name?: string
   last_name?: string
   password?: string
+  phone?: string
+  cpf?: string
+}
+
+// Afiliado
+export interface Affiliate {
+  id: number
+  code: string
+  pix_key: string
+  pix_key_type: "cpf" | "email" | "phone" | "aleatoria"
+  commission_balance: string
+  total_earned: string
+}
+
+// Saque
+export interface Payout {
+  id: number
+  amount: string
+  status: "pending" | "paid" | "rejected"
+  notes?: string
+  created_at?: string
+  paid_at?: string
 }
 
 // ====================
@@ -103,7 +139,7 @@ class ApiClient {
   }
 
   // ====================
-  // 🧠 MÉTODOS DE AUTENTICAÇÃO
+  // 🔐 AUTENTICAÇÃO
   // ====================
   async login(credentials: LoginCredentials): Promise<ApiResponse<AuthTokens>> {
     return this.request<AuthTokens>(routes.auth.login, {
@@ -127,7 +163,7 @@ class ApiClient {
   }
 
   // ====================
-  // 👤 MÉTODOS DE USUÁRIO
+  // 👤 USUÁRIOS
   // ====================
   async createUser(userData: UserRegistration): Promise<ApiResponse<User>> {
     return this.request<User>(routes.user.create, {
@@ -164,10 +200,76 @@ class ApiClient {
       headers: { Authorization: `Bearer ${token}` },
     })
   }
+
+  // ====================
+  // 🤝 AFILIADOS
+  // ====================
+  async createAffiliate(data: { pix_key: string; pix_key_type: string }, token: string): Promise<ApiResponse<Affiliate>> {
+    return this.request<Affiliate>(routes.affiliate.base, {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  async listAffiliates(token: string): Promise<ApiResponse<Affiliate[]>> {
+    return this.request<Affiliate[]>(routes.affiliate.base, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  async getAffiliateStats(token: string): Promise<ApiResponse<any>> {
+    return this.request<any>(routes.affiliate.stats, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  async getAffiliateSales(token: string): Promise<ApiResponse<any>> {
+    return this.request<any>(routes.affiliate.sales, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  async updateAffiliate(id: number, data: Partial<Affiliate>, token: string): Promise<ApiResponse<Affiliate>> {
+    return this.request<Affiliate>(`${routes.affiliate.base}${id}/`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  // ====================
+  // 💸 SAQUES (PAYOUTS)
+  // ====================
+  async createPayout(data: { amount: string; notes?: string }, token: string): Promise<ApiResponse<Payout>> {
+    return this.request<Payout>(routes.payout.base, {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  async listPayouts(token: string): Promise<ApiResponse<Payout[]>> {
+    return this.request<Payout[]>(routes.payout.base, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
+
+  async updatePayout(id: number, data: Partial<Payout>, token: string): Promise<ApiResponse<Payout>> {
+    return this.request<Payout>(`${routes.payout.base}${id}/`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  }
 }
 
 // ====================
-// 🚀 EXPORTAÇÃO PRONTA
+// 🚀 EXPORTAÇÃO FINAL
 // ====================
 const apiClient = new ApiClient(API_BASE_URL)
 export default apiClient
