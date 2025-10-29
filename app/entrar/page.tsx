@@ -1,12 +1,49 @@
 "use client"
 
+import type React from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
 import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import apiClient from "@/lib/api"
 
 export default function EntrarPage() {
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const response = await apiClient.login({ identifier: username, password })
+
+      if (response.error) {
+        setError(response.error)
+      } else if (response.data?.access) {
+        // Salva tokens no localStorage
+        localStorage.setItem("accessToken", response.data.access)
+        localStorage.setItem("refreshToken", response.data.refresh)
+
+        // Redireciona para a página inicial
+        router.push("/")
+      } else {
+        setError("Login falhou. Tente novamente.")
+      }
+    } catch (err) {
+      console.error("Erro no login:", err)
+      setError("Ocorreu um erro inesperado. Tente novamente.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-20 sm:py-24">
       <div className="w-full max-w-6xl">
@@ -22,43 +59,56 @@ export default function EntrarPage() {
               <div className="space-y-3">
                 <h1 className="text-4xl sm:text-5xl font-bold text-black">Faça o login</h1>
                 <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                  viage num mundo de oportunidades, conheça formas de entender e conhecer novos benefícios
+                  Viage num mundo de oportunidades, conheça formas de entender e conhecer novos benefícios
                 </p>
               </div>
 
-              <form className="space-y-5 mt-8">
-                <div>
-                  <Input
-                    type="text"
-                    placeholder="Usuario"
-                    className="w-full px-5 py-6 rounded-full border-2 border-gray-200 focus:border-gray-300 focus:ring-0 text-base"
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-5 mt-8">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-full text-sm">
+                    {error}
+                  </div>
+                )}
 
-                <div>
-                  <Input
-                    type="password"
-                    placeholder="PassWord"
-                    className="w-full px-5 py-6 rounded-full border-2 border-gray-200 focus:border-gray-300 focus:ring-0 text-base"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  placeholder="Usuário"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="w-full px-5 py-6 rounded-full border-2 border-gray-200 focus:border-gray-300 focus:ring-0 text-base"
+                />
+
+                <Input
+                  type="password"
+                  placeholder="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="w-full px-5 py-6 rounded-full border-2 border-gray-200 focus:border-gray-300 focus:ring-0 text-base"
+                />
 
                 <div className="flex justify-start">
                   <Link href="#" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                    esqueceu a senha?
+                    Esqueceu a senha?
                   </Link>
                 </div>
 
                 <div className="space-y-3 pt-2">
                   <Button
                     type="submit"
-                    className="w-full bg-[#4CE921] hover:bg-[#3DD118] text-black font-bold text-base py-6 rounded-full transition-all duration-300 hover:scale-[1.02]"
+                    disabled={isLoading}
+                    className="w-full bg-[#4CE921] hover:bg-[#3DD118] text-black font-bold text-base py-6 rounded-full transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Login
+                    {isLoading ? "Entrando..." : "Login"}
                   </Button>
 
                   <Button
                     type="button"
+                    disabled={isLoading}
+                    onClick={() => router.push("/cadastro")}
                     className="w-full bg-[#4CE921] hover:bg-[#3DD118] text-black font-bold text-base py-6 rounded-full transition-all duration-300 hover:scale-[1.02]"
                   >
                     Crie Sua Conta
