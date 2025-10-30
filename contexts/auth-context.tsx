@@ -1,8 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { useRouter } from "next/navigation"
 import Cookies from "js-cookie"
+import { useRouter } from "next/navigation"
 
 interface User {
   username: string
@@ -11,109 +11,58 @@ interface User {
   last_name?: string
 }
 
-interface AuthProviderProps {
-  children: ReactNode
-  initialUser?: User | null
-}
-
 interface AuthContextType {
   user: User | null
-  isLoading: boolean
-  login: (identifier: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-  refreshUser: () => Promise<void>
-  setUser: React.Dispatch<React.SetStateAction<User | null>>
+  setUser: (user: User | null) => void
+  logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(initialUser)
-  const [isLoading, setIsLoading] = useState(!initialUser)
+export function AuthProvider({ children, initialUser }: { children: ReactNode; initialUser?: User | null }) {
+  const [user, setUser] = useState<User | null>(initialUser || null)
   const router = useRouter()
 
-  // Sincroniza o usuário inicial (vindo do servidor)
+  // ✅ Carrega token e usuário do localStorage ao iniciar
   useEffect(() => {
-    if (initialUser) {
-      setUser(initialUser)
-      setIsLoading(false)
+    const storedUser = localStorage.getItem("user")
+    const storedToken = localStorage.getItem("token")
+
+    if (storedUser && storedToken && !user) {
+      try {
+        const parsedUser = JSON.parse(storedUser)
+        setUser(parsedUser)
+      } catch (error) {
+        console.error("Erro ao carregar usuário do localStorage:", error)
+        localStorage.removeItem("user")
+        localStorage.removeItem("token")
+      }
+    }
+  }, [])
+
+  // ✅ Sempre que o usuário mudar, salva no localStorage
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user))
+      const token = Cookies.get("token") // pega o token do cookie se existir
+      if (token) localStorage.setItem("token", token)
     } else {
-      const initAuth = async () => {
-        await refreshUser()
-        setIsLoading(false)
-      }
-      initAuth()
+      localStorage.removeItem("user")
+      localStorage.removeItem("token")
     }
-  }, [initialUser])
+  }, [user])
 
-  const refreshUser = async () => {
-    const token = Cookies.get("auth_token")
-    if (!token) {
-      setUser(null)
-      return
-    }
-
-    try {
-      const res = await fetch("/api/refresh", {
-        method: "GET", // troque para POST se sua API precisar
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      })
-
-      if (!res.ok) throw new Error("Falha ao atualizar usuário")
-      const data = await res.json()
-      setUser(data.user)
-    } catch (err) {
-      console.error("Erro no refresh:", err)
-      setUser(null)
-      Cookies.remove("auth_token")
-    }
-  }
-
-  const login = async (identifier: string, password: string) => {
-    setIsLoading(true)
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-        credentials: "include",
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Falha no login")
-
-      if (data.token) {
-        Cookies.set("auth_token", data.token, { expires: 7 })
-      }
-
-      // Garante atualização imediata no contexto
-      setUser(data.user || null)
-      router.push("/dashboard")
-    } catch (err) {
-      console.error("Erro no login:", err)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const logout = async () => {
-    setIsLoading(true)
-    try {
-      await fetch("/api/logout", { method: "POST", credentials: "include" })
-    } catch (err) {
-      console.error("Erro no logout:", err)
-    } finally {
-      setUser(null)
-      Cookies.remove("auth_token")
-      router.push("/entrar")
-      setIsLoading(false)
-    }
+  // ✅ Função de logout
+  const logout = () => {
+    setUser(null)
+    localStorage.removeItem("user")
+    localStorage.removeItem("token")
+    Cookies.remove("token")
+    router.push("/entrar")
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, logout }}>
       {children}
     </AuthContext.Provider>
   )

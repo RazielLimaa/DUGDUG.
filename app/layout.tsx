@@ -5,7 +5,6 @@ import "./globals.css"
 import { getCurrentUser } from "@/app/actions/auth"
 import { AuthProvider } from "@/contexts/auth-context"
 
-
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
